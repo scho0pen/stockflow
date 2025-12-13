@@ -1,79 +1,58 @@
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { BrowserRouter } from 'react-router-dom'; // Necesario para useNavigate
+import { render, screen, fireEvent } from '@testing-library/react';
 import LoginPage from '../components/LoginPage';
-import axios from 'axios';
 
-// Mock de Axios por si el componente hace la llamada internamente
-jest.mock('axios');
+const mockNavigate = jest.fn();
+
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => mockNavigate,
+}));
 
 describe('LoginPage Component', () => {
+  
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  test('Debe renderizar el formulario de inicio de sesión correctamente', () => {
+    render(<LoginPage />);
+
+    // SOLUCIÓN AMBIGÜEDAD: Buscamos específicamente el Encabezado (h2)
+    expect(screen.getByRole('heading', { name: /Iniciar Sesión/i })).toBeInTheDocument();
+
+    // Verificamos Inputs por su etiqueta (ahora funciona porque arreglamos el componente)
+    expect(screen.getByLabelText(/Correo Electrónico/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Contraseña/i)).toBeInTheDocument();
     
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
+    // SOLUCIÓN AMBIGÜEDAD: Buscamos específicamente el Botón
+    expect(screen.getByRole('button', { name: /Iniciar Sesión/i })).toBeInTheDocument();
+  });
 
-    test('Permite escribir credenciales y enviar el formulario', async () => {
-        // PREPARACIÓN
-        // Si tu componente recibe una prop onLogin, la mockeamos
-        const mockOnLogin = jest.fn();
-        
-        // Si tu componente hace la petición HTTP internamente:
-        axios.post.mockResolvedValue({ data: { token: 'fake-jwt-token' } });
+  test('Debe permitir escribir en los campos de texto', () => {
+    render(<LoginPage />);
 
-        const user = userEvent.setup();
+    const emailInput = screen.getByLabelText(/Correo Electrónico/i);
+    const passwordInput = screen.getByLabelText(/Contraseña/i);
 
-        // EJECUCIÓN
-        // PRINCIPIO DIP: Inyectamos el Router para que el componente funcione en el test
-        render(
-            <BrowserRouter>
-                <LoginPage onLogin={mockOnLogin} />
-            </BrowserRouter>
-        );
+    fireEvent.change(emailInput, { target: { value: 'test@ibero.edu.co' } });
+    fireEvent.change(passwordInput, { target: { value: '123456' } });
 
-        // VERIFICACIÓN DE ELEMENTOS
-        const emailInput = screen.getByPlaceholderText(/correo/i);
-        const passwordInput = screen.getByPlaceholderText(/contraseña/i);
-        const loginButton = screen.getByRole('button', { name: /iniciar/i });
+    expect(emailInput.value).toBe('test@ibero.edu.co');
+    expect(passwordInput.value).toBe('123456');
+  });
 
-        // INTERACCIÓN
-        await user.type(emailInput, 'test@ibero.edu.co');
-        await user.type(passwordInput, '123456');
-        await user.click(loginButton);
+  test('Debe redirigir al Dashboard ("/") al enviar el formulario', () => {
+    render(<LoginPage />);
 
-        // ASERCIÓN
-        await waitFor(() => {
-            // Verifica uno de los dos escenarios dependiendo de tu implementación:
-            
-            // Caso A: Si usas axios dentro del componente
-            // expect(axios.post).toHaveBeenCalled(); 
-            
-            // Caso B: Si usas la prop onLogin
-            // expect(mockOnLogin).toHaveBeenCalled();
-            
-            // Al menos verifica que no haya errores visibles
-            expect(screen.queryByText(/error/i)).not.toBeInTheDocument();
-        });
-    });
+    const emailInput = screen.getByLabelText(/Correo Electrónico/i);
+    const passwordInput = screen.getByLabelText(/Contraseña/i);
+    const submitButton = screen.getByRole('button', { name: /Iniciar Sesión/i });
 
-    test('Muestra error visual con credenciales inválidas', async () => {
-        axios.post.mockRejectedValue(new Error('Credenciales incorrectas'));
-        const user = userEvent.setup();
+    fireEvent.change(emailInput, { target: { value: 'usuario@test.com' } });
+    fireEvent.change(passwordInput, { target: { value: 'password123' } });
 
-        render(
-            <BrowserRouter>
-                <LoginPage />
-            </BrowserRouter>
-        );
+    fireEvent.click(submitButton);
 
-        await user.type(screen.getByPlaceholderText(/correo/i), 'fail@test.com');
-        await user.type(screen.getByPlaceholderText(/contraseña/i), 'wrongpass');
-        await user.click(screen.getByRole('button', { name: /iniciar/i }));
-
-        // Espera a que aparezca algún mensaje de error
-        // Asegúrate de que tu componente renderice un texto con la palabra "error" o "válido"
-        // await waitFor(() => {
-        //    expect(screen.getByText(/error/i)).toBeInTheDocument();
-        // });
-    });
+    expect(mockNavigate).toHaveBeenCalledWith('/');
+  });
 });
