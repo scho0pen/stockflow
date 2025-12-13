@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Trash2, Eye, X, AlertTriangle, Package } from 'lucide-react';
+const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
+
 
 const ReservationList = () => {
   const [reservations, setReservations] = useState([]);
@@ -17,7 +19,7 @@ const ReservationList = () => {
 
   const fetchReservations = async () => {
     try {
-      const res = await axios.get('/api/reservations');
+      const res = await axios.get(`${API_URL}/api/reservations`);
       setReservations(res.data);
     } catch (err) {
       console.error(err);
@@ -53,7 +55,7 @@ const ReservationList = () => {
   const confirmDelete = async () => {
     if (!reservationToDelete) return;
     try {
-      await axios.delete(`/api/reservations/${reservationToDelete}`);
+      await axios.delete(`${API_URL}/api/reservations/${id}`);
       setReservations(prev => prev.filter(res => res._id !== reservationToDelete));
       setReservationToDelete(null);
     } catch (err) {
