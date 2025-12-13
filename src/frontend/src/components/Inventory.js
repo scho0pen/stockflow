@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { ShoppingCart, CheckCircle, Package, AlertCircle, Info } from 'lucide-react';
+import { ShoppingCart, CheckCircle } from 'lucide-react';
+
 const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
 
-// --- DATA SOURCE (SRP: Separación de datos) ---
+// --- DATA SOURCE ---
+// Ahora cada producto tiene su propiedad 'image' apuntando al archivo correcto en public/assets
 const PRODUCTS = [
   {
     id: 'P001',
@@ -11,6 +13,7 @@ const PRODUCTS = [
     price: 115960,
     description: 'Tratamiento hidro-oleo repelente base agua para piedras naturales.',
     stock: 42,
+    image: '/assets/P001.png' // Asegúrate de que la extensión (.png/.jpg) coincida
   },
   {
     id: 'P002',
@@ -18,6 +21,7 @@ const PRODUCTS = [
     price: 41960,
     description: 'Limpiador especializado para final de obra y manchas difíciles.',
     stock: 48,
+    image: '/assets/P002.jpg'
   },
   {
     id: 'P003',
@@ -25,25 +29,19 @@ const PRODUCTS = [
     price: 19960,
     description: 'Producto oleo-hidro repelente de manchas, para la protección.',
     stock: 22,
+    image: '/assets/P003.png'
   },
   {
     id: 'P004',
     name: 'Jabón Líquido – Stonprotec®',
     price: 15960,
     description: 'Jabón pH neutro concentrado para mantenimiento diario.',
-    stock: 0, // Ejemplo sin stock
+    stock: 0, 
+    image: '/assets/P004.jpg'
   },
 ];
 
-// --- HELPER: Gestión de Imágenes ---
-const getProductImage = (name) => {
-  // Lógica para mapear nombres a archivos reales en public/assets
-  if (name.includes('Limpiador') || name.includes('Stonprotec')) return '/assets/P002.jpg';
-  // Fallback a una imagen por defecto o placeholder profesional
-  return '/assets/P002.jpg'; 
-};
-
-// --- SUB-COMPONENTE: Tarjeta de Producto (SRP) ---
+// --- SUB-COMPONENTE: Tarjeta de Producto ---
 const ProductCard = ({ product, onReserve, loading }) => {
   const isOut = product.stock === 0;
 
@@ -60,15 +58,19 @@ const ProductCard = ({ product, onReserve, loading }) => {
       position: 'relative'
     },
     imageContainer: {
-      height: '200px',
+      height: '250px', // Un poco más alto para lucir mejor las imágenes
       overflow: 'hidden',
       backgroundColor: '#f8f9fa',
-      position: 'relative'
+      position: 'relative',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center'
     },
     image: {
       width: '100%',
       height: '100%',
-      objectFit: 'cover',
+      objectFit: 'contain', // 'contain' muestra toda la imagen sin recortarla
+      padding: '10px',     // Un poco de aire alrededor
       transition: 'transform 0.3s'
     },
     badge: {
@@ -81,7 +83,8 @@ const ProductCard = ({ product, onReserve, loading }) => {
       fontWeight: '700',
       backgroundColor: isOut ? '#fee2e2' : '#dcfce7',
       color: isOut ? '#ef4444' : '#166534',
-      boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+      boxShadow: '0 4px 10px rgba(0,0,0,0.1)',
+      zIndex: 2
     },
     content: { padding: '25px', flex: 1, display: 'flex', flexDirection: 'column' },
     title: { fontSize: '1.1rem', fontWeight: '700', color: '#1a1a1a', marginBottom: '10px' },
@@ -104,20 +107,28 @@ const ProductCard = ({ product, onReserve, loading }) => {
   };
 
   return (
-    <div style={styles.card} onMouseEnter={(e) => {
+    <div 
+      style={styles.card} 
+      onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'translateY(-5px)';
         e.currentTarget.style.boxShadow = '0 20px 40px rgba(0,0,0,0.08)';
-    }} onMouseLeave={(e) => {
+      }} 
+      onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
         e.currentTarget.style.boxShadow = '0 10px 25px rgba(0,0,0,0.04)';
-    }}>
+      }}
+    >
       <div style={styles.imageContainer}>
         <span style={styles.badge}>{isOut ? 'Agotado' : `Stock: ${product.stock}`}</span>
         <img 
-          src={getProductImage(product.name)} 
+          src={product.image} 
           alt={product.name} 
           style={styles.image}
-          onError={(e) => e.target.src = 'https://via.placeholder.com/300?text=No+Image'}
+          // Si la imagen falla, muestra un placeholder elegante
+          onError={(e) => {
+            e.target.onerror = null; 
+            e.target.src = 'https://via.placeholder.com/300x300?text=No+Image';
+          }}
         />
       </div>
       <div style={styles.content}>
@@ -139,7 +150,7 @@ const ProductCard = ({ product, onReserve, loading }) => {
   );
 };
 
-// --- SUB-COMPONENTE: Modal de Éxito (SRP) ---
+// --- SUB-COMPONENTE: Modal de Éxito ---
 const SuccessModal = ({ data, onClose }) => {
   if (!data) return null;
 
@@ -176,7 +187,7 @@ const SuccessModal = ({ data, onClose }) => {
         <h2 style={{margin: '0 0 10px', color: '#1a1a1a'}}>¡Reserva Exitosa!</h2>
         <p style={{color: '#666', lineHeight: '1.5'}}>
           Has reservado <strong>1 unidad</strong> de<br/>
-          <span style={{color: '#166534', fontWeight: '600'}}>{data.item}</span>
+          <span style={{color: '#166534', fontWeight: '600'}}>{data.productName}</span>
         </p>
         <button style={modalStyles.btn} onClick={onClose}>Entendido</button>
       </div>
@@ -192,10 +203,9 @@ const Inventory = () => {
   const handleReserve = async (product) => {
     setReservingId(product.id);
     
-    // Payload compatible con tu ReservationController
     const reservationData = {
       productName: product.name,
-      user: 'Usuario Actual', // En una app real vendría del contexto de Auth
+      user: 'Usuario Actual',
       quantity: 1,
       price: product.price,
       description: product.description,
@@ -204,7 +214,7 @@ const Inventory = () => {
 
     try {
       await axios.post(`${API_URL}/api/reservations`, reservationData);
-      setSuccessData(reservationData); // Dispara el modal
+      setSuccessData(reservationData);
     } catch (err) {
       console.error(err);
       alert('Error al conectar con el servidor. Intenta nuevamente.');
@@ -219,9 +229,7 @@ const Inventory = () => {
       fontFamily: '-apple-system, system-ui, sans-serif'
     },
     container: { maxWidth: '1200px', margin: '0 auto' },
-    header: {
-      marginBottom: '40px', textAlign: 'center'
-    },
+    header: { marginBottom: '40px', textAlign: 'center' },
     title: { fontSize: '2.5rem', fontWeight: '800', color: '#1a1a1a', marginBottom: '10px' },
     subtitle: { color: '#6b7280', fontSize: '1.1rem' },
     grid: {
