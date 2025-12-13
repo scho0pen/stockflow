@@ -3,6 +3,7 @@ import axios from 'axios';
 import { ShoppingCart, CheckCircle } from 'lucide-react';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
+await axios.post(`${API_URL}/api/reservations`, reservationData);
 
 // --- DATA SOURCE ---
 // Ahora cada producto tiene su propiedad 'image' apuntando al archivo correcto en public/assets
