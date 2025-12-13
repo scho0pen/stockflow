@@ -1,96 +1,108 @@
-const reservationService = require('../services/reservationService');
+const Reservation = require('../models/reservationModel');
 
-/**
- * Controller layer for reservation endpoints. It receives HTTP requests and
- * returns responses, delegating business logic to the service layer.
- */
-class ReservationController {
-  /**
-   * Create a new reservation.
-   * @param {import('express').Request} req
-   * @param {import('express').Response} res
-   */
-  async create(req, res) {
-    try {
-      const reservation = await reservationService.createReservation(req.body);
-      return res.status(201).json(reservation);
-    } catch (error) {
-      console.error('Error creating reservation', error);
-      return res.status(400).json({ message: 'Error creating reservation', error: error.message });
-    }
+// 1. Crear Reserva
+exports.create = async (req, res) => {
+  try {
+    const reservation = new Reservation(req.body);
+    await reservation.save();
+    res.status(201).json({ success: true, data: reservation });
+  } catch (error) {
+    console.error(error);
+    res.status(400).json({ success: false, error: error.message });
   }
+};
 
-  /**
-   * Get all reservations.
-   * @param {import('express').Request} req
-   * @param {import('express').Response} res
-   */
-  async list(req, res) {
-    try {
-      const reservations = await reservationService.getAllReservations();
-      return res.json(reservations);
-    } catch (error) {
-      console.error('Error fetching reservations', error);
-      return res.status(500).json({ message: 'Error fetching reservations', error: error.message });
-    }
+// 2. Listar Reservas
+exports.list = async (req, res) => {
+  try {
+    const reservations = await Reservation.find();
+    res.status(200).json(reservations);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
+};
 
-  /**
-   * Get a single reservation by ID.
-   * @param {import('express').Request} req
-   * @param {import('express').Response} res
-   */
-  async getById(req, res) {
-    try {
-      const { id } = req.params;
-      const reservation = await reservationService.getReservationById(id);
-      if (!reservation) {
-        return res.status(404).json({ message: 'Reservation not found' });
+// 3. Obtener Reserva por ID
+exports.getById = async (req, res) => {
+  try {
+    const reservation = await Reservation.findById(req.params.id);
+    if (!reservation) {
+      return res.status(404).json({ message: 'Reserva no encontrada' });
+    }
+    res.status(200).json(reservation);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 4. Eliminar Reserva
+exports.delete = async (req, res) => {
+  try {
+    await Reservation.findByIdAndDelete(req.params.id);
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// 5. Estadísticas del Dashboard
+exports.getDashboardStats = async (req, res) => {
+  try {
+    // A. Ventas Totales (Solo Activas)
+    const salesStats = await Reservation.aggregate([
+      { $match: { status: 'Activa' } },
+      {
+        $group: {
+          _id: null,
+          totalSales: { $sum: '$price' },
+          totalItems: { $sum: '$quantity' }
+        }
       }
-      return res.json(reservation);
-    } catch (error) {
-      console.error('Error fetching reservation', error);
-      return res.status(500).json({ message: 'Error fetching reservation', error: error.message });
-    }
-  }
+    ]);
 
-  /**
-   * Update a reservation by ID.
-   * @param {import('express').Request} req
-   * @param {import('express').Response} res
-   */
-  async update(req, res) {
-    try {
-      const { id } = req.params;
-      const updated = await reservationService.updateReservation(id, req.body);
-      if (!updated) {
-        return res.status(404).json({ message: 'Reservation not found' });
+    // B. Top Productos
+    const topProducts = await Reservation.aggregate([
+      { $match: { status: 'Activa' } },
+      {
+        $group: {
+          _id: '$productName',
+          count: { $sum: '$quantity' },
+          totalRevenue: { $sum: '$price' }
+        }
+      },
+      { $sort: { count: -1 } },
+      { $limit: 5 }
+    ]);
+
+    // C. Estado de Reservas
+    const statusStats = await Reservation.aggregate([
+      {
+        $group: {
+          _id: '$status',
+          count: { $sum: 1 }
+        }
       }
-      return res.json(updated);
-    } catch (error) {
-      console.error('Error updating reservation', error);
-      return res.status(400).json({ message: 'Error updating reservation', error: error.message });
-    }
-  }
+    ]);
 
-  /**
-   * Delete a reservation by ID.
-   * @param {import('express').Request} req
-   * @param {import('express').Response} res
-   */
-  async delete(req, res) {
-    try {
-      const { id } = req.params;
-      const deleted = await reservationService.deleteReservation(id);
-      if (!deleted) {
-        return res.status(404).json({ message: 'Reservation not found' });
-      }
-      return res.status(204).send();
-    } catch (error) {
-      console.error('Error deleting reservation', error);
-      return res.status(500).json({ message: 'Error deleting reservation', error: error.message });
-    }
-  }
-}
+    // Armar respuesta segura
+    const stats = {
+      totalSales: salesStats[0]?.totalSales || 0,
+      reservedItems: salesStats[0]?.totalItems || 0,
+      topProducts: topProducts.map(p => ({
+        name: p._id || 'Desconocido',
+        quantity: p.count,
+        revenue: p.totalRevenue
+      })),
+      statusBreakdown: statusStats.map(s => ({
+        status: s._id || 'Sin estado',
+        count: s.count
+      }))
+    };
 
-module.exports = new ReservationController();
+    res.json(stats);
+
+  } catch (error) {
+    console.error('Error en dashboard stats:', error);
+    res.status(500).json({ message: 'Error al calcular estadísticas' });
+  }
+};
