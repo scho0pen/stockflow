@@ -1,0 +1,29 @@
+{
+  "name": "reservation-app-backend",
+  "version": "1.0.0",
+  "description": "Backend API for the commercial advisers reservation system.",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "test": "jest --coverage"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mongoose": "^7.0.1",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "jest": "^29.6.0",
+    "supertest": "^6.3.3",
+    "nodemon": "^3.0.1"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "roots": ["<rootDir>/src", "<rootDir>/tests"],
+    "moduleFileExtensions": ["js", "json"],
+    "collectCoverageFrom": ["src/**/*.{js,jsx}"],
+    "coverageDirectory": "coverage"
+  }
+}
