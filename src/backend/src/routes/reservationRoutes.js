@@ -2,27 +2,16 @@ const express = require('express');
 const router = express.Router();
 const reservationController = require('../controllers/reservationController');
 
-// --- RUTAS ESTÁTICAS (Deben ir primero) ---
-
-// Obtener estadísticas para el Dashboard
+// 1. Estadísticas
 router.get('/stats', reservationController.getDashboardStats);
 
-
-// --- RUTAS GENERALES ---
-
-// Crear una nueva reserva
+// 2. Rutas Generales
 router.post('/', reservationController.create);
-
-// Listar todas las reservas
 router.get('/', reservationController.list);
 
-
-// --- RUTAS DINÁMICAS (Con parámetros ID, deben ir al final) ---
-
-// Obtener una reserva específica por ID
+// 3. Rutas con ID
 router.get('/:id', reservationController.getById);
-
-// Eliminar una reserva por ID
+router.put('/:id', reservationController.update);
 router.delete('/:id', reservationController.delete);
 
 module.exports = router;
