@@ -1,10 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-/**
- * LoginPage renders a simple login form. On successful submission it navigates
- * to the dashboard. Real authentication is out of scope for this prototype.
- */
 function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -12,7 +8,6 @@ function LoginPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // In a real app, perform authentication here
     navigate('/');
   };
 
@@ -21,8 +16,10 @@ function LoginPage() {
       <h2>Iniciar Sesión</h2>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '1rem' }}>
-          <label>Correo Electrónico</label>
+          {/* CORRECCIÓN 1: Agregamos htmlFor */}
+          <label htmlFor="email">Correo Electrónico</label>
           <input
+            id="email" // CORRECCIÓN 2: Agregamos id coincidente
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -31,8 +28,10 @@ function LoginPage() {
           />
         </div>
         <div style={{ marginBottom: '1rem' }}>
-          <label>Contraseña</label>
+          {/* CORRECCIÓN 3: Lo mismo para contraseña */}
+          <label htmlFor="password">Contraseña</label>
           <input
+            id="password" // ID Coincidente
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
