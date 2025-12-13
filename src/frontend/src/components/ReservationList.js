@@ -5,6 +5,7 @@ import { Trash2, Eye, X, AlertTriangle, Package } from 'lucide-react';
 // 1. CONFIGURACIÓN DE LA URL DEL BACKEND
 // Esto selecciona la URL de producción (Render) o la local automáticamente
 const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
+const res = await axios.get(`${API_URL}/api/reservations`);
 
 const ReservationList = () => {
   const [reservations, setReservations] = useState([]);
