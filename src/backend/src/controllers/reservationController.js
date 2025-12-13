@@ -8,7 +8,8 @@ exports.create = async (req, res) => {
     res.status(201).json({ success: true, data: reservation });
   } catch (error) {
     console.error(error);
-    res.status(400).json({ success: false, error: error.message });
+    // Nota: Estandarizamos el error a 'message' para facilitar los tests
+    res.status(400).json({ success: false, message: error.message, error: error.message });
   }
 };
 
@@ -18,7 +19,7 @@ exports.list = async (req, res) => {
     const reservations = await Reservation.find();
     res.status(200).json(reservations);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -31,24 +32,45 @@ exports.getById = async (req, res) => {
     }
     res.status(200).json(reservation);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
-// 4. Eliminar Reserva
+// 4. Actualizar Reserva (LA QUE FALTABA)
+exports.update = async (req, res) => {
+  try {
+    const reservation = await Reservation.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true } // new: devuelve el dato actualizado
+    );
+    
+    if (!reservation) {
+      return res.status(404).json({ message: 'Reserva no encontrada' });
+    }
+    
+    res.status(200).json(reservation);
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+// 5. Eliminar Reserva
 exports.delete = async (req, res) => {
   try {
-    await Reservation.findByIdAndDelete(req.params.id);
-    res.status(200).json({ success: true });
+    const reservation = await Reservation.findByIdAndDelete(req.params.id);
+    if (!reservation) {
+        return res.status(404).json({ message: 'Reserva no encontrada' });
+    }
+    res.status(204).send(); // 204 No Content
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
-// 5. Estadísticas del Dashboard
+// 6. Estadísticas del Dashboard
 exports.getDashboardStats = async (req, res) => {
   try {
-    // A. Ventas Totales (Solo Activas)
     const salesStats = await Reservation.aggregate([
       { $match: { status: 'Activa' } },
       {
@@ -60,7 +82,6 @@ exports.getDashboardStats = async (req, res) => {
       }
     ]);
 
-    // B. Top Productos
     const topProducts = await Reservation.aggregate([
       { $match: { status: 'Activa' } },
       {
@@ -74,7 +95,6 @@ exports.getDashboardStats = async (req, res) => {
       { $limit: 5 }
     ]);
 
-    // C. Estado de Reservas
     const statusStats = await Reservation.aggregate([
       {
         $group: {
@@ -84,7 +104,6 @@ exports.getDashboardStats = async (req, res) => {
       }
     ]);
 
-    // Armar respuesta segura
     const stats = {
       totalSales: salesStats[0]?.totalSales || 0,
       reservedItems: salesStats[0]?.totalItems || 0,
@@ -100,7 +119,6 @@ exports.getDashboardStats = async (req, res) => {
     };
 
     res.json(stats);
-
   } catch (error) {
     console.error('Error en dashboard stats:', error);
     res.status(500).json({ message: 'Error al calcular estadísticas' });
