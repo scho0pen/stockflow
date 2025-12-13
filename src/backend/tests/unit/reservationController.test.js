@@ -67,6 +67,16 @@ describe('Reservation Controller - Unit Tests', () => {
       expect(res.statusCode).toBe(200);
       expect(res._getJSONData()).toEqual(mockList);
     });
+
+    it('Debe retornar 500 si falla la base de datos', async () => {
+      // Forzamos el error en el mock
+      Reservation.find.mockRejectedValue(new Error('Conexión perdida'));
+
+      await reservationController.list(req, res);
+
+      expect(res.statusCode).toBe(500);
+      expect(res._getJSONData()).toHaveProperty('message', 'Conexión perdida'); // (Línea 22 cubierta)
+    });
   });
 
   // --- GET BY ID ---
@@ -89,6 +99,16 @@ describe('Reservation Controller - Unit Tests', () => {
       await reservationController.getById(req, res);
 
       expect(res.statusCode).toBe(404);
+    });
+
+    it('Debe retornar 500 si hay un error interno', async () => {
+      req.params.id = '123';
+      Reservation.findById.mockRejectedValue(new Error('Error crítico'));
+
+      await reservationController.getById(req, res);
+
+      expect(res.statusCode).toBe(500);
+      expect(res._getJSONData()).toHaveProperty('message', 'Error crítico'); // (Línea 35 cubierta)
     });
   });
 
@@ -136,6 +156,65 @@ describe('Reservation Controller - Unit Tests', () => {
       await reservationController.delete(req, res);
 
       expect(res.statusCode).toBe(404);
+    });
+
+    it('Debe retornar 500 si falla la eliminación', async () => {
+      req.params.id = '123';
+      Reservation.findByIdAndDelete.mockRejectedValue(new Error('Error al borrar'));
+
+      await reservationController.delete(req, res);
+
+      expect(res.statusCode).toBe(500);
+      expect(res._getJSONData()).toHaveProperty('message', 'Error al borrar'); // (Línea 67 cubierta)
+    });
+  });
+
+  // --- DASHBOARD STATS ---  //
+  describe('getDashboardStats', () => {
+    it('Debe retornar las estadísticas correctamente (200)', async () => {
+      // Preparamos los datos falsos que devolvería MongoDB
+      const mockSales = [{ totalSales: 10000, totalItems: 5 }];
+      const mockTopProds = [{ _id: 'Laptop', count: 2, totalRevenue: 5000 }];
+      const mockStatus = [{ _id: 'Activa', count: 3 }, { _id: 'Cancelada', count: 1 }];
+
+      // Como tu controlador llama a .aggregate() 3 veces, usamos mockResolvedValueOnce 3 veces
+      Reservation.aggregate = jest.fn()
+        .mockResolvedValueOnce(mockSales)      // 1ª llamada: Ventas
+        .mockResolvedValueOnce(mockTopProds)   // 2ª llamada: Top Productos
+        .mockResolvedValueOnce(mockStatus);    // 3ª llamada: Estados
+
+      await reservationController.getDashboardStats(req, res);
+
+      expect(res.statusCode).toBe(200);
+      const data = res._getJSONData();
+      
+      // Verificaciones
+      expect(data.totalSales).toBe(10000);
+      expect(data.topProducts[0].name).toBe('Laptop');
+      expect(data.statusBreakdown).toHaveLength(2);
+    });
+
+    it('Debe manejar arrays vacíos si no hay reservas (200)', async () => {
+      // Si la DB está vacía, aggregate devuelve arrays vacíos
+      Reservation.aggregate = jest.fn()
+        .mockResolvedValueOnce([]) 
+        .mockResolvedValueOnce([]) 
+        .mockResolvedValueOnce([]);
+
+      await reservationController.getDashboardStats(req, res);
+
+      const data = res._getJSONData();
+      expect(data.totalSales).toBe(0); // Debe manejar el 0 por defecto
+      expect(data.topProducts).toEqual([]);
+    });
+
+    it('Debe retornar 500 si falla la base de datos', async () => {
+      Reservation.aggregate = jest.fn().mockRejectedValue(new Error('Error de conexión'));
+
+      await reservationController.getDashboardStats(req, res);
+
+      expect(res.statusCode).toBe(500);
+      expect(res._getJSONData()).toHaveProperty('message', 'Error al calcular estadísticas');
     });
   });
 
