@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { ShoppingCart, CheckCircle, Package, AlertCircle, Info } from 'lucide-react';
+const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
 
 // --- DATA SOURCE (SRP: Separación de datos) ---
 const PRODUCTS = [
@@ -202,7 +203,7 @@ const Inventory = () => {
     };
 
     try {
-      await axios.post('/api/reservations', reservationData);
+      await axios.post(`${API_URL}/api/reservations`, reservationData);
       setSuccessData(reservationData); // Dispara el modal
     } catch (err) {
       console.error(err);
