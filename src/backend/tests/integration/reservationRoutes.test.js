@@ -1,9 +1,7 @@
 const request = require('supertest');
-const app = require('../../src/app'); // Importamos la App real
-const Reservation = require('../../src/models/reservationModel'); // Importamos el modelo
+const app = require('../../src/app');
+const Reservation = require('../../src/models/reservationModel');
 
-// MOCK GLOBAL DEL MODELO:
-// Esto intercepta cualquier llamada a la BD y devuelve lo que nosotros queramos.
 jest.mock('../../src/models/reservationModel');
 
 describe('Reservation Routes Integration', () => {
@@ -18,8 +16,6 @@ describe('Reservation Routes Integration', () => {
       { _id: '1', productName: 'Laptop', price: 1000 },
       { _id: '2', productName: 'Proyector', price: 500 }
     ];
-
-    // Simulamos que Reservation.find() devuelve nuestro array
     Reservation.find.mockResolvedValue(mockReservations);
 
     const res = await request(app).get('/api/reservations');
@@ -40,9 +36,11 @@ describe('Reservation Routes Integration', () => {
       status: 'Activa' 
     };
 
-    // Simulamos el .save() del modelo
-    Reservation.mockImplementation(() => ({
-      save: jest.fn().mockResolvedValue({ _id: '123', ...newRes })
+    // CORRECCIÓN CLAVE:
+    // Mockeamos el constructor de la clase Reservation
+    Reservation.mockImplementation((data) => ({
+      ...data, // Mantenemos los datos que le pasamos al constructor
+      save: jest.fn().mockResolvedValue({ _id: '123', ...data }) // save devuelve la promesa resuelta
     }));
 
     const res = await request(app)
@@ -51,6 +49,7 @@ describe('Reservation Routes Integration', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
+    // Ahora sí, res.body.data tendrá los datos porque el mock los preservó
     expect(res.body.data.productName).toBe('New Item');
   });
 
@@ -58,8 +57,6 @@ describe('Reservation Routes Integration', () => {
   test('PUT /api/reservations/:id updates reservation', async () => {
     const updatedData = { status: 'Confirmada' };
     
-    // Simulamos findByIdAndUpdate
-    // new: true devuelve el objeto modificado
     Reservation.findByIdAndUpdate.mockResolvedValue({ 
       _id: '1', 
       productName: 'Laptop', 
@@ -76,7 +73,6 @@ describe('Reservation Routes Integration', () => {
 
   // --- DELETE ---
   test('DELETE /api/reservations/:id deletes reservation', async () => {
-    // Simulamos que encuentra y borra
     Reservation.findByIdAndDelete.mockResolvedValue({ _id: '1' });
 
     const res = await request(app).delete('/api/reservations/1');
