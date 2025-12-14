@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Trash2, Eye, X, AlertTriangle, Package, List} from 'lucide-react';
+// CORRECCIÓN: Agregamos 'List' a los imports
+import { Trash2, Eye, X, AlertTriangle, Package, List } from 'lucide-react';
 
-// 1. URL DEL BACKEND
+// URL DEL BACKEND
 const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
 
 const ReservationList = () => {
@@ -20,7 +21,6 @@ const ReservationList = () => {
   const fetchReservations = async () => {
     setLoading(true);
     try {
-      // 2. Aquí SÍ se hace el GET correctamente dentro de una función async
       const res = await axios.get(`${API_URL}/api/reservations`);
       setReservations(res.data);
       setError(null);
@@ -40,22 +40,19 @@ const ReservationList = () => {
     if (!reservationToDelete) return;
 
     try {
-      // 3. DELETE correcto usando la variable de entorno
       await axios.delete(`${API_URL}/api/reservations/${reservationToDelete._id}`);
       
-      // Actualización optimista (borrar de la lista visualmente)
+      // Actualización optimista
       setReservations(prev => prev.filter(r => r._id !== reservationToDelete._id));
       
       setReservationToDelete(null);
       alert('Reserva eliminada exitosamente.');
     } catch (err) {
       console.error('Error al eliminar:', err);
-      alert('Error al eliminar la reserva. Revisa la consola (F12) para más detalles.');
+      alert('Error al eliminar la reserva. Revisa la consola para más detalles.');
     }
   };
 
-  // ... (Tus estilos y JSX siguen aquí igual que antes)
-  
   const styles = {
     wrapper: { padding: '40px 20px', backgroundColor: '#f8f9fa', minHeight: 'calc(100vh - 60px)', fontFamily: '-apple-system, system-ui, sans-serif' },
     table: { width: '100%', borderCollapse: 'separate', borderSpacing: '0 10px', marginTop: '20px' },
@@ -78,6 +75,7 @@ const ReservationList = () => {
   return (
     <div style={styles.wrapper}>
       <h1 style={{fontSize: '2rem', fontWeight: '700', color: '#1a1a1a', marginBottom: '20px', textAlign: 'center'}}>
+        {/* Aquí es donde se usa el componente List */}
         <List size={28} style={{marginRight: '10px'}} /> Lista de Reservas
       </h1>
       
