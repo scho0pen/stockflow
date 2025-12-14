@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Trash2, Eye, X, AlertTriangle, Package } from 'lucide-react';
+import { Trash2, Eye, X, AlertTriangle, Package, List} from 'lucide-react';
 
 // 1. URL DEL BACKEND
 const API_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
